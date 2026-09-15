@@ -1,55 +1,235 @@
-# ConnectPlus V1
+# ConnectPlus V3 — Guia de instalação
 
-Painel ConnectPlus V1 em PHP.
+Este guia explica como colocar o painel em uma hospedagem com cPanel, configurar o banco de dados e entrar no painel.
 
-## Instalação segura
+## 1. Requisitos
 
-Este repositório é preparado para ficar no GitHub sem publicar a senha real do banco.
+- Hospedagem com cPanel.
+- PHP 8.x (recomendado usar a mesma versão configurada na hospedagem; PHP 8.1+ é recomendado).
+- MySQL/MariaDB.
+- phpMyAdmin.
+- Um domínio, subdomínio ou uma pasta. O painel foi preparado para detectar automaticamente a URL onde estiver instalado.
 
-### 1. GitHub
+## 2. Criar o banco de dados no cPanel
 
-Envie o conteúdo do projeto para o repositório:
+No cPanel:
 
-`ConnectPlus-v1`
+1. Abra **MySQL Databases**.
+2. Crie um banco de dados.
+3. Crie um usuário MySQL.
+4. Adicione o usuário ao banco.
+5. Marque **ALL PRIVILEGES**.
+6. Anote o nome completo do banco, usuário e senha.
 
-O arquivo `.env.example` é apenas um modelo. **Nunca coloque a senha real do banco no GitHub.**
+> Em muitas hospedagens o cPanel acrescenta automaticamente o prefixo da conta ao nome do banco e do usuário.
 
-### 2. Hospedagem/cPanel
+## 3. Importar o banco
 
-Baixe o projeto do GitHub ou envie os arquivos para a hospedagem.
+1. Abra **phpMyAdmin**.
+2. Selecione o banco criado.
+3. Clique em **Importar**.
+4. Selecione o arquivo `banco.sql` deste pacote.
+5. Execute a importação.
 
-Crie o banco MySQL/MariaDB e o usuário no cPanel e conceda as permissões necessárias.
+Se a hospedagem limitar o tamanho do arquivo, use o recurso de importação disponível no próprio cPanel ou importe o SQL em partes.
 
-Configure os dados do banco **somente no servidor**:
+## 4. Configurar o acesso ao banco
 
-```text
-DB_HOST=localhost
-DB_NAME=nome_real_do_banco
-DB_USER=usuario_real
-DB_PASS=senha_real
+Abra o arquivo:
+
+`config.php`
+
+Localize:
+
+```php
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'SEU_BANCO');
+define('DB_USER', 'SEU_USUARIO');
+define('DB_PASS', 'SUA_SENHA');
 ```
 
-Se o projeto usar um arquivo PHP de configuração em vez de `.env`, preencha os valores diretamente nesse arquivo **no servidor**, sem fazer commit dessas credenciais.
+Preencha com os dados do banco criado no cPanel.
 
-### 3. Domínio, subdomínio ou subpasta
+**Não coloque a senha do banco em páginas públicas ou envie esse arquivo para terceiros.**
 
-O painel deve funcionar em:
+## 5. Enviar o painel para a hospedagem
 
-```text
-https://painel.seudominio.com.br/admin/login.php
-https://seudominio.com.br/painel/admin/login.php
-https://outrodominio.com/admin/login.php
+### Usando um subdomínio
+
+Exemplo:
+
+`https://painel.seudominio.com.br`
+
+1. Crie o subdomínio no cPanel.
+2. Confira qual é a pasta/document root desse subdomínio.
+3. Abra o **Gerenciador de Arquivos**.
+4. Envie o conteúdo do ZIP para essa pasta.
+5. Extraia o ZIP.
+6. O arquivo `admin/login.php` deve ficar dentro da instalação do painel.
+
+O endereço de login será:
+
+`https://painel.seudominio.com.br/admin/login.php`
+
+### Usando uma pasta do domínio
+
+Exemplo:
+
+`https://seudominio.com.br/painel`
+
+Coloque os arquivos dentro da pasta `painel`.
+
+O login será:
+
+`https://seudominio.com.br/painel/admin/login.php`
+
+### Usando um domínio próprio
+
+Se o domínio apontar diretamente para a pasta do painel, o login será:
+
+`https://seudominio.com.br/admin/login.php`
+
+O painel não deve precisar de um domínio fixo no código para funcionar nesses casos.
+
+## 6. Primeiro acesso
+
+O banco incluído possui um usuário administrativo com o nome:
+
+**Usuário:** `admin`
+
+### Senha
+
+A senha original do hash que está no `banco.sql` **não pode ser recuperada lendo o banco**. Por segurança, a senha fica armazenada como hash.
+
+Para garantir um acesso conhecido após importar o banco, faça um reset da senha pelo phpMyAdmin.
+
+No phpMyAdmin, selecione o banco do painel, abra a aba **SQL** e execute:
+
+```sql
+UPDATE users
+SET password = '$2y$12$r58N2iqYRjnhRldlSMP3k.4ekhGs1sE6MjI9uO1nTwiyq5bpoU1wi',
+    role = 'admin',
+    status = 'active'
+WHERE username = 'admin';
 ```
 
-Não fixe `cybercoari.com.br` no código.
+Depois disso:
 
-Os redirecionamentos internos devem preservar o host e o caminho onde o painel foi instalado.
+**Usuário:** `admin`  
+**Senha:** `Admin@1234`
 
-### 4. Banco de dados
+> Troque essa senha depois do primeiro acesso em **Alterar Senha**. Não mantenha uma senha padrão em um painel publicado na internet.
 
-Importe o SQL fornecido pelo projeto no banco criado.
+## 7. Endereço de login
 
-Depois confira se as tabelas necessárias foram criadas antes de tentar o login.
+Se o painel estiver no subdomínio:
+
+`https://painel.seudominio.com.br/admin/login.php`
+
+Depois do login, o painel deve permanecer no mesmo domínio/subdomínio:
+
+`https://painel.seudominio.com.br/admin/index.php`
+
+Ele não deve mandar o usuário para a raiz de outro domínio.
+
+## 8. Se aparecer página sem estilo (CSS)
+
+Confira se este arquivo existe:
+
+`assets/css/style.css`
+
+E se a URL estiver apontando para a instalação do painel, e não para a raiz de outro domínio.
+
+Exemplo correto em subdomínio:
+
+`https://painel.seudominio.com.br/assets/css/style.css`
+
+## 9. Se der erro de banco de dados
+
+Confira primeiro no `config.php`:
+
+- `DB_HOST`
+- `DB_NAME`
+- `DB_USER`
+- `DB_PASS`
+
+Depois confirme no cPanel que o usuário MySQL foi adicionado ao banco com **ALL PRIVILEGES**.
+
+## 10. Pastas usadas pelo painel
+
+O painel possui áreas para atualizações, temas, backups e arquivos enviados. Não apague estas pastas:
+
+- `admin/`
+- `api/`
+- `assets/`
+- `backups/`
+- `database/`
+- `includes/`
+- `theme/`
+- `update/`
+
+Mantenha também os arquivos `.htaccess` existentes dentro das pastas que já possuem um.
+
+## 11. Após instalar
+
+Faça este teste:
+
+1. Abrir `/admin/login.php`.
+2. Entrar com `admin` / `Admin@1234` após executar o reset da senha acima.
+3. Abrir **Dashboard**.
+4. Abrir **Configurações**.
+5. Abrir **Servidores**.
+6. Abrir **Redes**.
+7. Abrir **Tema**.
+8. Abrir **Mensagens**.
+9. Abrir **Logs**.
+10. Abrir **Usuários**.
+11. Testar **Alterar Senha**.
+12. Clicar em **Sair**.
+13. Confirmar que retorna para `/admin/login.php` no mesmo domínio/subdomínio.
+
+## 12. Segurança
+
+Depois de colocar o painel online:
+
+- Troque a senha `Admin@1234`.
+- Use HTTPS/SSL.
+- Não publique o conteúdo de `config.php`.
+- Não compartilhe o usuário e senha do banco.
+- Faça backups do banco antes de alterações importantes.
+- Evite deixar arquivos de backup SQL públicos.
+
+## Estrutura principal
+
+```text
+ConnectPlus/
+├── admin/
+│   ├── login.php
+│   ├── logout.php
+│   ├── index.php
+│   ├── tema.php
+│   ├── config/
+│   ├── servers/
+│   ├── networks/
+│   ├── users/
+│   ├── messages/
+│   ├── logs/
+│   └── backups/
+├── api/
+├── assets/
+│   ├── css/
+│   └── js/
+├── backups/
+├── database/
+├── includes/
+├── theme/
+├── update/
+├── banco.sql
+├── config.php
+└── index.php
+```
+
+**Fim do guia.**
 
 ### 5. Login
 
